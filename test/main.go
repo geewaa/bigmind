@@ -18,12 +18,16 @@ func main() {
 		"step":  1,
 		"name":  "zhang",
 	})
+
 	m := &mind.BaseMinder{}
-	myenv.AddMinder(m)
 	m.SetAction(calint)
+
+	myenv.AddMinder(m)
+
 	m1 := &Minder1{}
 	myenv.AddMinder(m1)
 	m1.SetAction(calint1)
+
 	myenv.Start()
 	myenv.Snapshot()
 }
@@ -45,6 +49,7 @@ func calint(m mind.Minder) error {
 		// log.Println(err)
 		return fmt.Errorf("加载数据出错:%w", err)
 	}
+
 	log.Printf("env:%#v", v)
 	i := v.Times
 	for ; i > 0; i -= v.Step {
@@ -61,10 +66,14 @@ func calint(m mind.Minder) error {
 			"min":   v.Min,
 			"max":   v.Max,
 			"times": i,
+			"name":  "li",
 		})
+	log.Println("li done")
 
 	return nil
 }
+
+// /////////////////////////////////////////////////////
 
 type MyData1 struct {
 	Times int64  `json:"times"`
@@ -83,9 +92,11 @@ func calint1(m mind.Minder) error {
 		// log.Println(err)
 		return fmt.Errorf("加载数据出错:%w", err)
 	}
+
 	v.Step = 3
 	log.Printf("env:%#v", v)
 	i := v.Times
+
 	for ; i > 0; i -= v.Step {
 		n := rand.Int63()
 		if n < int64(v.Min) {
@@ -101,7 +112,9 @@ func calint1(m mind.Minder) error {
 			"min":   v.Min,
 			"max":   v.Max,
 			"times": i,
+			"name":  "xu",
 		})
+	log.Println("xu done")
 
 	return nil
 }

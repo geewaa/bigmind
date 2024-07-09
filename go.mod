@@ -1,3 +1,3 @@
 module github.com/geewaa/bigmind
 
-go 1.21.5
+go 1.22

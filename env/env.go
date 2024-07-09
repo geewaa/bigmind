@@ -11,27 +11,27 @@ import (
 type EnvVar map[string]any
 
 type Env struct {
-	name   string
-	ev     *sync.Map
-	ms     []mind.Minder
-	notice []chan string
+	name    string
+	ev      *sync.Map     // ENV VALUE STORE
+	ms      []mind.Minder // MINDER
+	notices []chan string // DATA CHANGE NOTICE
 }
 
 func NewEnv(name string) *Env {
 	return &Env{
-		name:   name,
-		ev:     &sync.Map{},
-		notice: []chan string{},
+		name:    name,
+		ev:      &sync.Map{},
+		notices: []chan string{},
 	}
 }
 
 func (e *Env) AddMinder(m mind.Minder) {
-	notice := make(chan string)
+	notice := make(chan string, 100)
 	m.Init(notice, e.Get, e.Set)
 	// m.SetENVGET(e.Get)
 	// m.SetENVSET(e.Set)
 	e.ms = append(e.ms, m)
-	e.notice = append(e.notice, notice)
+	e.notices = append(e.notices, notice)
 }
 
 func (e *Env) Get() map[string]any {
@@ -48,11 +48,13 @@ func (e *Env) Set(v map[string]any) {
 	for k, v := range v {
 		e.Update(k, v)
 	}
+	for _, ntc := range e.notices {
+		ntc <- "upgrade"
+	}
 }
 
 func (e *Env) Update(key string, value any) {
 	e.ev.Store(key, value)
-	// notice
 }
 
 func (e *Env) Start() {
@@ -80,7 +82,7 @@ func LoadEnv[T any](ev *sync.Map) (*T, error) {
 		panic("LoadEnv: not a struct")
 	}
 	num := s.NumField()
-	for i := 0; i < num; i++ {
+	for i := range num {
 		f := s.Field(i)
 		key := f.Tag.Get("json")
 		if key == "" || key == "-" {

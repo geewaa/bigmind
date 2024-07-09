@@ -3,6 +3,7 @@ package mind
 import (
 	"log"
 	"sync"
+	"sync/atomic"
 )
 
 type ENVGET func() map[string]any
@@ -11,20 +12,22 @@ type ACTION func(Minder) error
 
 type BaseMinder struct {
 	// m      *Minder
-	action ACTION
-	envget ENVGET
-	envset ENVSET
-	notice chan string
-	ev     *sync.Map
+	action     ACTION
+	envget     ENVGET
+	envset     ENVSET
+	ev         *sync.Map
+	notice     chan string
+	EnvChanged *atomic.Bool
 }
 
 func NewMinder(m *Minder, c chan string, get ENVGET, set ENVSET) *BaseMinder {
 	return &BaseMinder{
 		// m:      m,
-		envget: get,
-		envset: set,
-		notice: c,
-		ev:     new(sync.Map),
+		envget:     get,
+		envset:     set,
+		notice:     c,
+		ev:         new(sync.Map),
+		EnvChanged: &atomic.Bool{},
 	}
 }
 
@@ -36,6 +39,7 @@ func (mr *BaseMinder) Init(c chan string, get ENVGET, set ENVSET) {
 	mr.envset = set
 	mr.notice = c
 	mr.ev = new(sync.Map)
+	mr.EnvChanged = &atomic.Bool{}
 }
 
 func (mr *BaseMinder) SetAction(f ACTION) {
@@ -53,6 +57,8 @@ func (mr *BaseMinder) Feedback() {
 	mr.envset(ev)
 }
 func (mr *BaseMinder) initenv() {
+	defer mr.EnvChanged.Store(false)
+
 	ev := mr.envget()
 	for k, v := range ev {
 		if v != nil {
@@ -73,6 +79,7 @@ func (mr *BaseMinder) Work(wg *sync.WaitGroup, m Minder) {
 					mr.ev.Store(k, v)
 				}
 			}
+			mr.EnvChanged.Store(true)
 		}
 	}()
 	mr.initenv()
